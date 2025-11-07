@@ -1,0 +1,231 @@
+{% extends './components/base.html' %}
+{% load static %}
+
+{% block content %}
+  <style>
+      /* --- TU CSS (SIN CAMBIOS) --- */
+      :root { --primary-bg: #4c2a85; --text-color: #ffffff; --btn-yes-bg: #9acd32; --btn-no-bg: #4f4f6b; --btn-comment-bg: #3a3a5a; --btn-back-bg: #c94c4c; --focus-outline: #f0e68c; }
+      .main-content-container { display: flex; flex-direction: column; justify-content: center; align-items: center; flex-grow: 1; padding: 20px; box-sizing: border-box; }
+      .feedback-container { width: 100%; max-width: 600px; text-align: center; }
+      .feedback-title { font-size: 2rem; font-weight: bold; text-transform: uppercase; margin-bottom: 25px; }
+      .question-wrapper { font-size: 1.5rem; margin-bottom: 35px; }
+      .buttons-choice { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; }
+      .btn { border: none; color: var(--text-color); padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; flex-grow: 1; max-width: 250px; }
+      .btn:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+      .btn-yes { background-color: var(--btn-yes-bg); }
+      .btn-no { background-color: var(--btn-no-bg); }
+      .btn.selected { outline: 4px solid var(--focus-outline); transform: scale(1.05); }
+      .btn-submit, .btn-back { text-decoration: none; margin: 15px auto; width: 100%; max-width: 515px; }
+      .btn-submit { background-color: var(--btn-comment-bg); }
+      .btn-back { background-color: var(--btn-back-bg); border-radius: 50px; }
+      #id_comment { display: none; }
+      @media (max-width: 768px) { .feedback-title { font-size: 1.6rem; margin-bottom: 20px; } .question-wrapper { font-size: 1.3rem; } .btn { font-size: 1.1rem; padding: 20px; } }
+  </style>
+
+  <div class="main-content-container">
+    <div class="feedback-container">
+      <h1 class="feedback-title" id="feedback-title-text">Módulo de Retroalimentación del Usuario</h1>
+
+      <form method="post" id="feedback-form" novalidate>
+        {% csrf_token %}
+        <input type="radio" id="responded_yes" name="responded_correctly" value="True" required style="display: none;">
+        <input type="radio" id="responded_no" name="responded_correctly" value="False" required style="display: none;">
+        {{ form.comment }}
+
+        <div class="question-wrapper" id="question-text">
+          <span>¿El asistente respondió correctamente a tu comando?</span>
+        </div>
+
+        <div class="buttons-choice">
+          <button type="button" class="btn btn-yes" id="btn-yes">✓ SI</button>
+          <button type="button" class="btn btn-no" id="btn-no">X NO</button>
+        </div>
+
+        <button type="submit" class="btn btn-submit">💬 Enviar comentarios</button>
+      </form>
+
+      <a href="{% url 'auth_api:core:home' %}" class="btn btn-back" id="btn-back-link" style="margin-left:-20px">🏠 Volver al menú principal</a>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // --- Referencias a elementos del DOM ---
+      const form = document.getElementById('feedback-form');
+      const btnYes = document.getElementById('btn-yes');
+      const btnNo = document.getElementById('btn-no');
+      const btnBack = document.getElementById('btn-back-link');
+      const radioYes = document.getElementById('responded_yes');
+      const radioNo = document.getElementById('responded_no');
+      const commentTextarea = document.getElementById('id_comment');
+
+      // --- APIs de Voz ---
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const synthesis = window.speechSynthesis;
+
+      if (!SpeechRecognition) {
+        console.error("Las APIs de Voz no son compatibles.");
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'es-ES';
+
+      // --- Gestión de Estado del Flujo Conversacional ---
+      const STATES = {
+        IDLE: 'IDLE', // Esperando la primera elección (Sí/No)
+        WAITING_FOR_COMMENT_CONFIRMATION: 'WAITING_FOR_COMMENT_CONFIRMATION', // Esperando "sí" o "no" para el comentario
+        CAPTURING_COMMENT: 'CAPTURING_COMMENT', // Grabando el comentario del usuario
+        FINISHED: 'FINISHED' // El flujo ha terminado
+      };
+      let currentState = STATES.IDLE;
+      let inactivityTimer = null; // Timer para la respuesta de 5 segundos
+
+      // --- Funciones de Control de Voz ---
+
+      function stopAllVoiceActivity() {
+        synthesis.cancel();
+        recognition.stop();
+        if (inactivityTimer) clearTimeout(inactivityTimer); // Limpiar el timer si existe
+      }
+
+      function speak(text, onEndCallback = () => {}) {
+        stopAllVoiceActivity();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'es-ES';
+        utterance.onend = onEndCallback;
+        utterance.onerror = (e) => {
+          console.error("Error en síntesis de voz:", e);
+          onEndCallback();
+        };
+        synthesis.speak(utterance);
+      }
+
+      // --- Lógica del Flujo de Retroalimentación ---
+
+      // 1. Manejar la elección inicial (clic en Sí/No)
+      function handleInitialChoice(isCorrect) {
+        if (currentState !== STATES.IDLE) return; // Evita múltiples clics
+
+        if ('vibrate' in navigator) navigator.vibrate(100);
+        btnYes.classList.toggle('selected', isCorrect);
+        btnNo.classList.toggle('selected', !isCorrect);
+        radioYes.checked = isCorrect;
+        radioNo.checked = !isCorrect;
+
+        promptForVerbalFeedback();
+      }
+
+      // 2. Preguntar al usuario si desea dejar un comentario
+      function promptForVerbalFeedback() {
+        currentState = STATES.WAITING_FOR_COMMENT_CONFIRMATION;
+        const prompt = '¿Desea dar su opinión por voz? Diga claro o no.';
+
+        speak(prompt, () => {
+          recognition.continuous = false; // Escuchar una sola vez
+          recognition.start();
+
+          // Iniciar el temporizador de 5 segundos
+          inactivityTimer = setTimeout(() => {
+            recognition.stop(); // Detener el reconocimiento
+            if (currentState === STATES.WAITING_FOR_COMMENT_CONFIRMATION) {
+              // Si el estado no ha cambiado, el usuario no respondió
+              speak("No se detectó respuesta. Enviando retroalimentación sin opinión.", () => {
+                submitForm(); // Enviar sin comentario
+              });
+            }
+          }, 5000); // 5 segundos
+        });
+      }
+
+      // 3. Iniciar la captura del comentario de voz
+      function startCommentCapture() {
+        currentState = STATES.CAPTURING_COMMENT;
+        const prompt = 'Entendido. Hable ahora. Para finalizar, diga "terminar opinión".';
+        speak(prompt, () => {
+          recognition.continuous = true; // Escuchar continuamente
+          recognition.start();
+        });
+      }
+
+      // 4. Lógica de envío del formulario
+      function submitForm() {
+        if (currentState === STATES.FINISHED) return; // Evita envíos múltiples
+        currentState = STATES.FINISHED;
+
+        // Deshabilitar botones para prevenir más interacciones
+        btnYes.disabled = true;
+        btnNo.disabled = true;
+
+        speak("Retroalimentación enviada. Gracias por su ayuda.", () => {
+          setTimeout(() => form.submit(), 200); // Envía el formulario tras hablar
+        });
+      }
+
+      // --- Event Listeners ---
+
+      btnYes.addEventListener('click', () => handleInitialChoice(true));
+      btnNo.addEventListener('click', () => handleInitialChoice(false));
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault(); // Siempre prevenimos el envío por defecto
+        if (currentState !== STATES.CAPTURING_COMMENT && currentState !== STATES.FINISHED) {
+          // Si el usuario da clic en Enviar sin haber dicho si quiere opinar o no.
+          speak("Por favor, primero indique si el asistente respondió correctamente.", () => {
+             currentState = STATES.IDLE; // Resetear estado si es necesario
+          });
+        } else {
+          submitForm(); // El usuario hizo clic para enviar su comentario grabado.
+        }
+      });
+
+      // Detener todo al salir de la página
+      window.addEventListener('pagehide', stopAllVoiceActivity);
+      btnBack.addEventListener('click', stopAllVoiceActivity);
+
+      // --- Manejo de Resultados y Errores del Reconocimiento de Voz ---
+      recognition.onresult = (event) => {
+        clearTimeout(inactivityTimer); // Si hay resultado, cancelar el timer
+
+        const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+
+        if (currentState === STATES.WAITING_FOR_COMMENT_CONFIRMATION) {
+          if (transcript.includes('claro') || transcript.includes('claro')) {
+            startCommentCapture();
+          } else if (transcript.includes('no')) {
+            speak("Entendido, no se registrará una opinión.", () => {
+              submitForm();
+            });
+          }
+        } else if (currentState === STATES.CAPTURING_COMMENT) {
+          const fullTranscript = Array.from(event.results).map(r => r[0].transcript).join('');
+
+          if (fullTranscript.toLowerCase().includes('terminar opinión')) {
+            stopAllVoiceActivity();
+            const finalComment = fullTranscript.replace(/terminar opinión/gi, '').trim();
+            commentTextarea.value = finalComment;
+            speak("Opinión registrada. Para finalizar, presione el botón Enviar comentarios.");
+          } else {
+            commentTextarea.value = fullTranscript;
+          }
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Error de reconocimiento:", event.error);
+        clearTimeout(inactivityTimer); // Limpiar timer en caso de error
+      };
+
+      // --- Secuencia de bienvenida ---
+      speak("Bienvenido al módulo de retroalimentación.", () => {
+        setTimeout(() => {
+          speak("¿El asistente respondió correctamente a tu comando?", () => {
+            setTimeout(() => {
+              speak("Puede responder con los botones sí o no.");
+            }, 500);
+          });
+        }, 1500);
+      });
+    });
+  </script>
+{% endblock %}

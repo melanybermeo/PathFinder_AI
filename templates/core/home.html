@@ -1,0 +1,283 @@
+{% extends './components/base.html' %}
+{% load static %}
+
+{% block content %}
+  <style>
+      h1 {
+          text-align: center;
+          font-size: 24px;
+          margin-bottom: 30px;
+          color: #fff;
+          text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+      }
+
+      .messages {
+          max-width: 600px;
+          margin: 0 auto 20px auto;
+          text-align: center;
+      }
+
+      .alert {
+          padding: 12px 20px;
+          border-radius: 8px;
+          margin-bottom: 10px;
+          font-weight: bold;
+          transition: opacity 0.5s ease;
+      }
+
+      .alert-success {
+          background-color: #c6f6d5;
+          color: #22543d;
+          border-left: 4px solid #38a169;
+      }
+
+      .alert-error {
+          background-color: #fed7d7;
+          color: #742a2a;
+          border-left: 4px solid #e53e3e;
+      }
+
+      .alert-info {
+          background-color: #bee3f8;
+          color: #2c5282;
+          border-left: 4px solid #3182ce;
+      }
+
+      .cards-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 20px;
+      }
+
+      .cards-row {
+          display: grid;
+          gap: 20px;
+      }
+
+      .top-row {
+          grid-template-columns: repeat(2, 1fr);
+          margin-bottom: 20px;
+      }
+
+      .bottom-row {
+          grid-template-columns: repeat(3, 1fr);
+      }
+
+      .card {
+          background-color: #fff;
+          color: #000;
+          padding: 20px;
+          border-radius: 20px;
+          text-align: center;
+          text-decoration: none;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          transition: transform 0.2s;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 180px;
+      }
+
+      .card:hover {
+          transform: scale(1.05);
+      }
+
+      .card img {
+          width: 80px;
+          height: auto;
+          margin-top: 10px;
+      }
+
+      .card p {
+          font-weight: bold;
+          margin: 0;
+          font-size: 16px;
+      }
+
+      .card-sos p {
+          color: #e53e3e;
+      }
+
+      .card-sos p span {
+          font-size: 24px;
+      }
+
+      /* Responsividad para tablet */
+      @media (min-width: 768px) and (max-width: 991px) {
+          .top-row, .bottom-row {
+              grid-template-columns: repeat(2, 1fr);
+          }
+
+          .bottom-row .card:last-child {
+              grid-column: span 2;
+              justify-self: center;
+              width: 50%;
+          }
+      }
+
+      /* Responsividad para móvil */
+      @media (max-width: 767px) {
+          .top-row, .bottom-row {
+              grid-template-columns: repeat(2, 1fr);
+          }
+
+          .bottom-row .card:last-child {
+              grid-column: span 2;
+              justify-self: center;
+              width: 50%;
+          }
+
+          .card {
+              min-height: 150px;
+          }
+
+          .card img {
+              width: 60px;
+          }
+
+          .card p {
+              font-size: 14px;
+          }
+
+          h1 {
+              margin-top: -8px;
+          }
+          .cards-container{
+              margin-top: -10px;
+          }
+      }
+
+      /* Mejoras de accesibilidad */
+      .card {
+          font-size: 18px; /* Tamaño mayor para no videntes con asistentes de voz */
+      }
+
+      .card:focus {
+          outline: 3px solid #cddc39;
+      }
+  </style>
+  {% if messages %}
+    <div class="messages" id="messages-container">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <h1>ASISTENTE DE NAVEGACIÓN 👋</h1>
+  <div class="cards-container">
+    <div class="cards-row top-row">
+      <a href="{% url 'auth_api:intelligent_assistant:obstacle_detection' %}" class="card">
+        <p>Detección de obstáculos</p>
+        <img src="https://www.shutterstock.com/image-vector/blind-woman-holding-stick-mobile-600nw-1661441773.jpg"
+             alt="Icono detección">
+      </a>
+      <a href="{% url 'auth_api:core:training' %}" class="card">
+        <p>Guía de Usuario</p>
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135768.png"
+             alt="Icono guía de usuario">
+      </a>
+    </div>
+    <div class="cards-row bottom-row">
+      <a href="{% url 'auth_api:core:emergency' %}" class="card card-sos">
+        <p>Botón de emergencia</p>
+        <img src="https://thumbs.dreamstime.com/b/red-phone-symbol-making-emergency-sos-call-red-phone-making-sos-emergency-call-symbol-332616758.jpg"
+             alt="Icono SOS">
+      </a>
+      <a href="{% url 'auth_api:intelligent_assistant:text_reader' %}" class="card">
+        <p>Lectura de textos</p>
+        <img src="https://static.vecteezy.com/system/resources/previews/046/851/430/non_2x/cartoon-blue-book-read-learning-vector.jpg"
+             alt="Icono lectura">
+      </a>
+      <a href="{% url 'auth_api:core:feedback' %}" class="card">
+        <p>Retroalimentación del usuario</p>
+        <img src="https://media.istockphoto.com/id/1172142097/vector/operator-icon-vector-simple-and-flat-design-minimalist-style-black-color.jpg?s=612x612&w=0&k=20&c=A3-x56F4wLiDdMnQmSByHqgUz-elkp3CFZHiEvKfBSw="
+             alt="Icono retroalimentación">
+      </a>
+    </div>
+  </div>
+
+  <script>
+    console.log('Dashboard cargado correctamente');
+
+    // ============================================
+    // FUNCIÓN DE SÍNTESIS DE VOZ
+    // ============================================
+    function speak(text, callback) {
+      if (!('speechSynthesis' in window)) {
+        console.error('Tu navegador no soporta síntesis de voz');
+        if (callback) callback();
+        return;
+      }
+
+      // Cancelar cualquier síntesis en curso
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'es-ES';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      utterance.onend = () => {
+        if (callback) callback();
+      };
+
+      utterance.onerror = (event) => {
+        console.error('Error en síntesis de voz:', event);
+        if (callback) callback();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // ============================================
+    // BIENVENIDA CON VOZ AL INGRESAR
+    // ============================================
+    window.addEventListener('load', function () {
+      setTimeout(() => {
+        // Buscar el mensaje de bienvenida
+        const messagesContainer = document.querySelector('.messages');
+
+        if (messagesContainer) {
+          const successAlert = messagesContainer.querySelector('.alert-success');
+
+          if (successAlert) {
+            const welcomeMessage = successAlert.textContent.trim();
+            console.log('Mensaje de bienvenida encontrado:', welcomeMessage);
+
+            // Hablar el mensaje de bienvenida
+            speak(welcomeMessage);
+          }
+        }
+
+        // También leer otros mensajes (errores, info)
+        if (messagesContainer) {
+          const otherAlerts = messagesContainer.querySelectorAll('.alert:not(.alert-success)');
+
+          otherAlerts.forEach((alert, index) => {
+            const messageText = alert.textContent.trim();
+
+            // Leer después del mensaje de bienvenida con un delay
+            setTimeout(() => {
+              speak(messageText);
+            }, (index + 1) * 2500);
+          });
+        }
+      }, 800); // Esperar 800ms después de que la página cargue completamente
+    });
+
+    // ============================================
+    // OCULTAR MENSAJES DESPUÉS DE 6 SEGUNDOS
+    // ============================================
+    setTimeout(() => {
+      const messages = document.getElementById('messages-container');
+      if (messages) {
+        messages.style.opacity = "0";
+        setTimeout(() => messages.remove(), 500);
+      }
+    }, 6000);
+  </script>
+{% endblock %}

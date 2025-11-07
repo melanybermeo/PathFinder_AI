@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asistente de Navegación</title>
+  {% load static %}
+  <style>
+      body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+          background-color: #6a1b9a;
+          color: white;
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+      }
+
+      header {
+          background-color: #a9a9a9;
+          padding: 15px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          position: relative;
+      }
+
+      .header-left img {
+          width: 250px;
+          height: 50px;
+      }
+
+      .header-username {
+          background-color: #cddc39;
+          color: black;
+          padding: 10px 15px;
+          border-radius: 25px;
+          font-weight: bold;
+          cursor: pointer;
+          font-size: 16px;
+          position: relative;
+          user-select: none;
+      }
+
+      /* Oculto por defecto */
+      .dropdown {
+          display: none;
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background-color: #424242;
+          border-radius: 5px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          z-index: 1000;
+          min-width: 180px;
+          padding: 15px;
+      }
+
+      /* Cuando está activo, se muestra */
+      .dropdown.active {
+          display: block;
+      }
+
+      .dropdown button {
+          width: 100%;
+          padding: 12px;
+          background-color: #e53e3e;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+          margin-top: 10px;
+      }
+
+      .dropdown button:hover {
+          background-color: #c53030;
+      }
+
+      main.container {
+          flex: 1;
+          padding: 20px;
+          max-width: 1200px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+      }
+
+      @media (max-width: 768px) {
+          header {
+              flex-direction: column;
+              text-align: center;
+              padding: 10px;
+          }
+
+          .header-left img {
+              display: none;
+          }
+
+          .header-username {
+              font-size: 18px;
+              padding: 12px 20px;
+          }
+
+          .dropdown {
+              right: 50%;
+              transform: translateX(50%);
+              width: 80%;
+              margin-top: 10px;
+          }
+
+          .dropdown button {
+              font-size: 18px;
+              padding: 15px;
+          }
+      }
+
+      @media (max-width: 480px) {
+          .header-username {
+              font-size: 20px;
+          }
+
+          .dropdown {
+              width: 90%;
+          }
+      }
+
+      button {
+          min-height: 50px;
+          touch-action: manipulation;
+      }
+
+      *:focus {
+          outline: 3px solid #cddc39;
+          outline-offset: 2px;
+      }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <img src="{% static 'images/logo.png' %}" alt="Logo Asistente">
+  </div>
+
+  <div class="header-right">
+    <div class="header-username" id="userMenu">
+      {{ request.user.username }}
+      <div class="dropdown" id="dropdownMenu">
+        <form action="{% url 'auth_api:logout' %}" method="post" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit">Cerrar sesión</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  {% block content %}
+  {% endblock %}
+</main>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const userMenu = document.getElementById("userMenu");
+    const dropdown = document.getElementById("dropdownMenu");
+
+    // Toggle al hacer clic en el nombre de usuario
+    userMenu.addEventListener("click", function (e) {
+      e.stopPropagation(); // evita que cierre inmediatamente
+      dropdown.classList.toggle("active");
+    });
+
+    // Cerrar si se hace clic fuera
+    document.addEventListener("click", function (e) {
+      if (!userMenu.contains(e.target)) {
+        dropdown.classList.remove("active");
+      }
+    });
+  });
+</script>
+</body>
+</html>

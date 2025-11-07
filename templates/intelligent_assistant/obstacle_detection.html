@@ -1,0 +1,636 @@
+{% extends '../core/components/base.html' %}
+{% load static %}
+{% block content %}
+
+  <style>
+      :root {
+          --primary-bg: #3c1f76;
+          --indicator-bg: #2a1552;
+          --indicator-text: #ccc;
+          --indicator-active-bg: #a6d85b;
+          --indicator-blocked-bg: #e53e3e;
+          --indicator-active-text: #000;
+          --warning-box-bg: #e6c547;
+          --warning-box-text: #000;
+          --button-bg: #4caf50;
+          --button-repeat-bg: #4091ac;
+          --button-back-bg: #c94c4c;
+      }
+
+      * {
+          box-sizing: border-box;
+      }
+
+      .main-container {
+          max-width: 1200px;
+          margin: 20px auto;
+          padding: 20px;
+          color: white;
+      }
+
+      .header {
+          text-align: center;
+          margin-bottom: 20px;
+      }
+
+      .top-indicators {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 10px;
+      }
+
+      .top-indicators div {
+          background-color: var(--indicator-bg);
+          color: var(--indicator-text);
+          padding: 8px 25px;
+          font-weight: bold;
+          transition: all 0.3s;
+      }
+
+      .top-indicators div.clear {
+          background-color: var(--indicator-active-bg);
+          color: var(--indicator-active-text);
+      }
+
+      .top-indicators div.blocked {
+          background-color: var(--indicator-blocked-bg);
+          color: white;
+      }
+
+      .top-indicators .left {
+          border-radius: 8px 0 0 8px;
+      }
+
+      .top-indicators .right {
+          border-radius: 0 8px 8px 0;
+      }
+
+      .main-title {
+          font-size: 2.5rem;
+          font-weight: bold;
+          text-transform: uppercase;
+      }
+
+      .detection-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 30px;
+      }
+
+      .left-column {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+      }
+
+      .instruction-box {
+          background-color: var(--warning-box-bg);
+          color: var(--warning-box-text);
+          padding: 20px;
+          border-radius: 10px;
+          font-size: 1.5rem;
+          font-weight: bold;
+          min-height: 80px;
+          text-align: center;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+      }
+
+      .status-display {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 20px;
+          font-size: 1.2rem;
+      }
+
+      .status-display .user-icon {
+          font-size: 5rem;
+      }
+
+      .status-display .alerts .warning-icon {
+          color: var(--indicator-blocked-bg);
+          font-size: 3rem;
+          margin: 0 5px;
+          animation: blink 1.5s infinite;
+      }
+
+      @keyframes blink {
+          50% {
+              opacity: 0.3;
+          }
+      }
+
+      .status-indicator {
+          background: var(--indicator-bg);
+          padding: 10px 20px;
+          border-radius: 20px;
+      }
+
+      .mic-status {
+          background: #333;
+          padding: 10px 20px;
+          border-radius: 20px;
+          text-align: center;
+          display: none;
+      }
+
+      .mic-status.listening {
+          display: block;
+          background: #4caf50;
+          animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+          0%, 100% {
+              opacity: 1;
+          }
+          50% {
+              opacity: 0.6;
+          }
+      }
+
+      .controls {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+      }
+
+      .btn-control {
+          border: none;
+          padding: 18px;
+          font-size: 1.1rem;
+          font-weight: bold;
+          border-radius: 10px;
+          cursor: pointer;
+          color: white;
+          text-decoration: none;
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: opacity 0.3s;
+      }
+
+      .btn-control:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+      }
+
+      .btn-training {
+          background-color: var(--button-bg);
+      }
+
+      .btn-repeat {
+          background-color: var(--button-repeat-bg);
+      }
+
+      .btn-back {
+          background-color: var(--button-back-bg);
+      }
+
+      .speaker-icon {
+          opacity: 0.8;
+      }
+
+      .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+      }
+
+      .camera-view-container {
+          position: relative;
+          background-color: #000;
+          border: 4px solid #666;
+          border-radius: 10px;
+          overflow: hidden;
+          min-height: 400px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+      }
+
+      #video-feed {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: none;
+      }
+
+      #video-feed.active {
+          display: block;
+      }
+
+      #status-message {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          font-size: 1.5rem;
+          font-weight: bold;
+          background: rgba(0, 0, 0, 0.9);
+          padding: 20px;
+          text-align: center;
+          z-index: 10;
+      }
+
+      #status-message.hidden {
+          display: none;
+      }
+
+      .audio-control {
+          background: #333;
+          padding: 20px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          font-size: 1.5rem;
+      }
+
+      .audio-control input[type="range"] {
+          flex-grow: 1;
+      }
+
+      /* Indicador de procesamiento Gemini */
+      .gemini-indicator {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: rgba(106, 27, 154, 0.9);
+          color: white;
+          padding: 8px 15px;
+          border-radius: 20px;
+          font-size: 0.9rem;
+          font-weight: bold;
+          display: none;
+          z-index: 11;
+          animation: pulse 1.5s infinite;
+      }
+
+      .gemini-indicator.active {
+          display: block;
+      }
+
+      @media (max-width: 900px) {
+          .detection-grid {
+              grid-template-columns: 1fr;
+          }
+
+          .main-title {
+              font-size: 2rem;
+          }
+
+          .left-column {
+              order: 2;
+          }
+
+          .right-column {
+              order: 1;
+          }
+
+          .camera-view-container {
+              min-height: 300px;
+          }
+
+          #status-message {
+              font-size: 1.2rem;
+              padding: 15px;
+          }
+      }
+  </style>
+
+  <div class="main-container">
+    <div class="header">
+      <div class="top-indicators">
+        <div class="left" id="indicator-left">Izquierda</div>
+        <div class="center" id="indicator-center">Centro</div>
+        <div class="right" id="indicator-right">Derecha</div>
+      </div>
+      <h1 class="main-title">Guía Inteligente <span class="speaker-icon">🔊</span></h1>
+    </div>
+    <div class="detection-grid">
+      <div class="left-column">
+        <div class="instruction-box" id="instruction-box">Active la cámara para iniciar la guía.</div>
+        <div class="status-display">
+          <div class="user-icon">👤</div>
+          <div class="alerts">
+            <span class="warning-icon" id="warning1" style="display:none;">⚠️</span>
+          </div>
+        </div>
+        <div class="status-indicator" id="route-status">ESTADO: <span id="connection-status">DESCONECTADO</span></div>
+        <div class="mic-status" id="mic-status">🎤 Escuchando comando de voz...</div>
+        <div class="controls">
+          <button class="btn-control btn-training" id="btn-start">Iniciar Guía <span class="speaker-icon">🔊</span>
+          </button>
+          <button class="btn-control btn-repeat" id="btn-repeat">Repetir instrucción <span class="speaker-icon">🔊</span>
+          </button>
+          <a href="{% url 'auth_api:core:home' %}" class="btn-control btn-back" id="btn-back">Volver al menú</a>
+        </div>
+      </div>
+      <div class="right-column">
+        <div class="camera-view-container">
+          <video id="video-feed" autoplay playsinline muted></video>
+          <div id="status-message">Esperando activación de cámara...</div>
+          <div class="gemini-indicator" id="gemini-indicator">🔮 Analizando con Gemini...</div>
+        </div>
+        <div class="audio-control">
+          <span>🔊</span>
+          <input type="range" min="0" max="1" step="0.1" value="1" id="volume-slider">
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // --- Referencias a elementos del DOM ---
+    const video = document.getElementById('video-feed');
+    const instructionBox = document.getElementById('instruction-box');
+    const statusMessage = document.getElementById('status-message');
+    const connectionStatus = document.getElementById('connection-status');
+    const btnStart = document.getElementById('btn-start');
+    const btnRepeat = document.getElementById('btn-repeat');
+    const volumeSlider = document.getElementById('volume-slider');
+    const micStatus = document.getElementById('mic-status'); // Indicador visual del micrófono
+    const geminiIndicator = document.getElementById('gemini-indicator');
+    
+    // --- Variables de Estado y Control ---
+    let isGuidanceActive = false;
+    let isCameraOn = false;
+    let lastSpokenInstruction = "Sin instrucciones aún.";
+    let socket = null;
+    const synth = window.speechSynthesis;
+    let isSpeaking = false;
+    
+    // --- Variables para Reconocimiento de Voz ---
+    let recognition = null;
+    let isListening = false;
+
+    /**
+     * Habla un texto dado. Usa una bandera para evitar hablar múltiples
+     * cosas a la vez. El callback se ejecuta cuando termina de hablar.
+     */
+    const speak = (text, onEndCallback = null) => {
+      if (!text || text.trim() === '') {
+        if (onEndCallback) onEndCallback();
+        return;
+      }
+
+      if (isSpeaking) {
+        synth.cancel(); // Si está hablando, cancela para dar prioridad a lo nuevo.
+      }
+      
+      isSpeaking = true;
+      const utterance = new SpeechSynthesisUtterance(text.trim());
+      utterance.lang = 'es-ES';
+      // Lee el valor actual del slider de volumen cada vez que va a hablar.
+      utterance.volume = parseFloat(volumeSlider.value);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+
+      utterance.onend = () => {
+        isSpeaking = false;
+        lastSpokenInstruction = text;
+        console.log(`Voz finalizada: "${text}"`);
+        if (onEndCallback && typeof onEndCallback === 'function') {
+          onEndCallback();
+        }
+      };
+
+      utterance.onerror = (event) => {
+        console.error('Error en síntesis de voz:', event);
+        isSpeaking = false;
+        if (onEndCallback && typeof onEndCallback === 'function') {
+          onEndCallback();
+        }
+      };
+
+      synth.speak(utterance);
+    };
+
+    /**
+     * Inicializa el motor de reconocimiento de voz del navegador.
+     */
+    function initVoiceRecognition() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        console.warn('Reconocimiento de voz no soportado en este navegador.');
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = 'es-ES';
+      recognition.continuous = false; // Solo procesa un comando a la vez
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        micStatus.classList.add('listening');
+        console.log('🎤 Escuchando comando...');
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.toLowerCase().trim();
+        console.log('Comando escuchado:', transcript);
+
+        if (transcript.includes('cámara') && transcript.includes('activa')) {
+          speak('Comando recibido. Activando cámara.', () => {
+            startCamera();
+          });
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Error de reconocimiento:', event.error);
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micStatus.classList.remove('listening');
+        console.log('Reconocimiento finalizado.');
+      };
+    }
+
+    /**
+     * Activa el micrófono para escuchar un comando de voz.
+     * Se detiene automáticamente después de 7 segundos si no hay resultado.
+     */
+    function startListening() {
+      if (recognition && !isListening && !isCameraOn) {
+        try {
+          recognition.start();
+          // Establece un temporizador para detener la escucha después de 7 segundos
+          setTimeout(() => {
+            if (isListening) {
+              recognition.stop();
+              console.log("Tiempo de escucha agotado.");
+            }
+          }, 7000);
+        } catch (e) {
+          console.error('Error al iniciar el reconocimiento de voz:', e);
+        }
+      }
+    }
+    
+    /**
+     * Conecta al servidor WebSocket e inicializa los manejadores de eventos.
+     */
+    function connectWebSocket() {
+        // ... (resto del código sin cambios)
+      const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+      socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/obstacle_detection/`);
+
+      socket.onopen = () => {
+        console.log("✅ WebSocket conectado");
+        connectionStatus.textContent = "CONECTADO";
+        statusMessage.classList.add('hidden');
+        video.classList.add('active');
+        isGuidanceActive = true;
+        
+        speak("Guía inteligente conectada. Iniciando análisis.", () => {
+          requestInstructionCycle(); 
+        });
+      };
+
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.from_gemini) {
+          instructionBox.textContent = data.instruction;
+          geminiIndicator.classList.add('active');
+          console.log(`🔮 Instrucción recibida: "${data.instruction}"`);
+          
+          speak(data.instruction, () => {
+            setTimeout(() => {
+              geminiIndicator.classList.remove('active');
+              console.log("Pausa de 2 segundos finalizada. Solicitando nueva instrucción.");
+              requestInstructionCycle();
+            }, 2000);
+          });
+        }
+      };
+
+      socket.onclose = () => {
+        console.log("❌ WebSocket desconectado. Intentando reconectar...");
+        connectionStatus.textContent = "RECONECTANDO...";
+        isGuidanceActive = false;
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      socket.onerror = (err) => {
+        console.error("❌ Error de WebSocket:", err);
+        connectionStatus.textContent = "ERROR";
+        isGuidanceActive = false;
+        socket.close();
+      };
+    }
+    
+    /**
+     * Captura y envía 3 frames al backend para análisis.
+     */
+    async function requestInstructionCycle() {
+        // ... (resto del código sin cambios)
+      if (!isGuidanceActive || !isCameraOn || !socket || socket.readyState !== WebSocket.OPEN) {
+        console.warn("Ciclo de guía detenido o conexión no lista.");
+        return;
+      }
+      
+      console.log("Iniciando captura de 3 frames...");
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+
+      for (let i = 0; i < 3; i++) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/jpeg', 0.7);
+        socket.send(JSON.stringify({'image': imageData}));
+        await new Promise(resolve => setTimeout(resolve, 100)); 
+      }
+      
+      console.log("✅ 3 frames enviados. Esperando instrucción de Gemini...");
+      instructionBox.textContent = "Analizando...";
+    }
+
+    /**
+     * Inicia la cámara y la conexión WebSocket.
+     */
+    async function startCamera() {
+      if (isCameraOn) return;
+      if (recognition && isListening) recognition.stop(); // Detener escucha si está activa
+      
+      statusMessage.textContent = "Iniciando cámara...";
+      statusMessage.classList.remove('hidden');
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+        
+        video.srcObject = stream;
+        await new Promise(resolve => video.onloadedmetadata = resolve);
+        
+        statusMessage.textContent = "Conectando con el servidor...";
+        isCameraOn = true;
+        btnStart.textContent = "Guía Activa ✓";
+        btnStart.disabled = true;
+        
+        connectWebSocket();
+
+      } catch (e) {
+        console.error('❌ Error al acceder a la cámara:', e);
+        statusMessage.textContent = "Error de cámara. Verifique permisos.";
+        speak("No se pudo acceder a la cámara. Verifique los permisos.");
+      }
+    }
+
+    // --- Event Listeners ---
+    btnStart.addEventListener('click', startCamera);
+    
+    btnRepeat.addEventListener('click', () => {
+      if (lastSpokenInstruction) {
+        speak(lastSpokenInstruction);
+      }
+    });
+
+    // --- Limpieza al salir ---
+    window.addEventListener('beforeunload', () => {
+      isGuidanceActive = false;
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+      }
+      if (socket) socket.close();
+      if (recognition) recognition.abort();
+      synth.cancel();
+    });
+
+    // --- Flujo de Inicialización ---
+    setTimeout(() => {
+      // 1. Prepara el sistema de reconocimiento de voz
+      initVoiceRecognition();
+
+      // 2. Habla el mensaje de bienvenida
+      speak(
+        "Bienvenido a Guía Inteligente. Puede presionar el botón de inicio o decir 'cámara activa' para comenzar.",
+        // 3. Este callback se ejecuta CUANDO TERMINA de hablar
+        () => {
+          console.log('Mensaje de bienvenida completado. Activando micrófono.');
+          // 4. Activa el micrófono para escuchar el comando
+          startListening();
+        }
+      );
+    }, 500);
+  });
+</script>
+{% endblock %}
