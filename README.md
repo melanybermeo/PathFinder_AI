@@ -55,7 +55,7 @@ PathFinder AI es una aplicación web innovadora diseñada para asistir a persona
 
 1. **Clonar el repositorio**
 ```bash
-git clone https://github.com/JavicSoftCode-01/PathFinder_AI.git
+git clone https://github.com/melanybermeo/PathFinder_AI.git
 cd PathFinder_AI
 ```
 
